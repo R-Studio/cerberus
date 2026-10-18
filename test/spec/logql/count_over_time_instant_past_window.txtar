@@ -1,9 +1,36 @@
 -- query.logql --
 sum(count_over_time({job="api"}[1h]))
+-- parity --
+oracle: loki
+endpoint: /api/v1/query
+scope: full
 -- start --
 2026-01-01T12:00:00Z
 -- end --
 2026-01-01T12:00:00Z
+-- seed --
+CREATE TABLE otel_logs (
+    Timestamp DateTime64(9),
+    Body String,
+    SeverityText LowCardinality(String) DEFAULT '',
+    SeverityNumber UInt8 DEFAULT 0,
+    ResourceAttributes Map(String, String),
+    LogAttributes Map(String, String)
+) ENGINE = Memory;
+INSERT INTO otel_logs (Timestamp, Body, ResourceAttributes) VALUES
+    (toDateTime64('2025-12-31 23:30:00', 9), 'near-now-anchor', map('job', 'api', 'pod', 'p1')),
+    (toDateTime64('2026-01-01 00:00:00', 9), 'near-now-anchor', map('job', 'api', 'pod', 'p2')),
+    (toDateTime64('2026-01-01 10:30:00', 9), 'before-window', map('job', 'api', 'pod', 'p1')),
+    (toDateTime64('2026-01-01 11:00:00', 9), 'window-open-edge', map('job', 'api', 'pod', 'p1')),
+    (toDateTime64('2026-01-01 11:15:00', 9), 'in-window', map('job', 'api', 'pod', 'p1')),
+    (toDateTime64('2026-01-01 11:45:00', 9), 'in-window', map('job', 'api', 'pod', 'p2')),
+    (toDateTime64('2026-01-01 12:00:00', 9), 'window-closed-edge', map('job', 'api', 'pod', 'p2')),
+    (toDateTime64('2026-01-01 12:30:00', 9), 'after-eval-time', map('job', 'api', 'pod', 'p1')),
+    (toDateTime64('2026-06-01 00:00:00', 9), 'after-eval-time', map('job', 'api', 'pod', 'p2'));
+-- expected_rows --
+[
+  ["", {}, "2026-01-01T12:00:00Z", 3]
+]
 -- args --
 [0] string = ""
 [1] string = "Map(String,String)"
